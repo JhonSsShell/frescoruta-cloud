@@ -128,17 +128,19 @@ class RegistrationAgent:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
-    def _beat(self) -> None:
+    def _beat(self) -> bool:
         try:
             self.registry.register(self.name, self.url, self.version)
+            return True
         except redis.RedisError as exc:
             log.warning(f"No se pudo registrar {self.name} en el Service Registry: {exc}")
+            return False
 
     def start(self) -> None:
         if self.registry.client is None:
             return
-        self._beat()
-        log.info(f"Servicio registrado: {self.name} -> {self.url}")
+        if self._beat():
+            log.info(f"Servicio registrado: {self.name} -> {self.url}")
 
         def loop() -> None:
             while not self._stop.wait(self.interval):

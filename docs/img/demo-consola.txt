@@ -1,0 +1,50 @@
+
+== 1. Salud agregada (Gateway Aggregation + Health Endpoint Monitoring)
+   api-gateway            UP        http://localhost:8000
+   catalog-service        UP        http://localhost:8001
+   order-service          UP        http://localhost:8002
+   payment-service        UP        http://localhost:8003
+   notification-service   UP        http://localhost:8004
+
+== 2. Cache-Aside en el catálogo
+   GET /products -> 13 productos, X-Cache=HIT
+   GET /products -> 13 productos, X-Cache=HIT
+
+== 3. Saga exitosa
+   PED-4E186DF8  CONFIRMED  total=$88.300
+   saga: reserve_stock:SUCCEEDED → process_payment:SUCCEEDED → commit_stock:SUCCEEDED → confirm_order:SUCCEEDED
+
+== 4. Stock insuficiente (falla en T1, no se cobra)
+   PED-DA97DB53  REJECTED  total=$0
+   motivo: Stock insuficiente — Mora de Castilla: solicitado 500, disponible 34
+   saga: reserve_stock:FAILED → reject_order:SUCCEEDED
+
+== 5. Pago rechazado (falla en T2 → compensación: liberar stock)
+   PED-9828A7DD  REJECTED  total=$2.200.000
+   motivo: Pago rechazado — El monto supera el tope para pago contraentrega
+   saga: reserve_stock:SUCCEEDED → process_payment:FAILED → release_stock:COMPENSATED → reject_order:SUCCEEDED
+
+== 6. Pasarela caída: Retry + Circuit Breaker
+   intento 1: 224 ms
+   PED-B369F9B9  REJECTED  total=$88.300
+   motivo: Pasarela de pagos no disponible; no se realizó ningún cobro
+   saga: reserve_stock:SUCCEEDED → process_payment:FAILED → release_stock:COMPENSATED → reject_order:SUCCEEDED
+   intento 2: 29 ms
+   PED-58A7B5A2  REJECTED  total=$88.300
+   motivo: Pasarela de pagos no disponible; no se realizó ningún cobro
+   saga: reserve_stock:SUCCEEDED → process_payment:FAILED → release_stock:COMPENSATED → reject_order:SUCCEEDED
+   breaker catalog-service: CLOSED (rechazadas=0)
+   breaker payment-service: OPEN (rechazadas=2)
+
+== 7. Notificaciones generadas por eventos (Publish/Subscribe)
+   [EMAIL] order.rejected   -> compras@lahuerta.co: No pudimos procesar el pedido PED-58A7B5A2
+   [EMAIL] stock.low        -> compras@frescoruta.co: Stock bajo: Mora de Castilla
+   [EMAIL] order.rejected   -> compras@lahuerta.co: No pudimos procesar el pedido PED-B369F9B9
+   [EMAIL] stock.low        -> compras@frescoruta.co: Stock bajo: Mora de Castilla
+   [EMAIL] order.rejected   -> compras@lahuerta.co: No pudimos procesar el pedido PED-9828A7DD
+   [EMAIL] stock.low        -> compras@frescoruta.co: Stock bajo: Queso campesino
+   [EMAIL] order.rejected   -> compras@lahuerta.co: No pudimos procesar el pedido PED-DA97DB53
+   [WHATSAPP] order.confirmed  -> Restaurante La Huerta: Confirmación de pedido
+
+== 8. Métricas del gateway
+   {'rate_limited': 0, 'total_requests': 59, 'by_status_class': {'2xx': 59}, 'by_service': {'notification-service': {'requests': 13, 'avg_ms': 16.3, 'p95_ms': 43.0}, 'catalog-service': {'requests': 14, 'avg_ms': 13.3, 'p95_ms': 45.9}, 'order-service': {'requests': 27, 'avg_ms': 45.6, 'p95_ms': 222.9}, 'payment-service': {'requests': 5, 'avg_ms': 2.6, 'p95_ms': 3.3}}}

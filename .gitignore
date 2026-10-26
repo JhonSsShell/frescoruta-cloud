@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Datos locales (SQLite por servicio)
+data/
+*.db
+*.sqlite3
+
+# Entorno
+.env
+*.log
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

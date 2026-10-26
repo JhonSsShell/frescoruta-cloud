@@ -1,0 +1,33 @@
+[project]
+name = "frescoruta-cloud"
+version = "1.0.0"
+description = "Prototipo de arquitectura de microservicios en la nube para FrescoRuta S.A.S."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+addopts = "-q --import-mode=importlib"
+testpaths = [
+    "common/tests",
+    "services/catalog/tests",
+    "services/payments/tests",
+    "services/orders/tests",
+    "services/notifications/tests",
+    "services/gateway/tests",
+    "tests",
+]
+pythonpath = [
+    "common",
+    "services/catalog",
+    "services/payments",
+    "services/orders",
+    "services/notifications",
+    "services/gateway",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["B008"]

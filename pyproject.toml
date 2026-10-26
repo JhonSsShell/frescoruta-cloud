@@ -13,7 +13,6 @@ testpaths = [
     "services/orders/tests",
     "services/notifications/tests",
     "services/gateway/tests",
-    "tests",
 ]
 pythonpath = [
     "common",

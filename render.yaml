@@ -1,0 +1,117 @@
+# Blueprint de Render (Infraestructura como Código) — https://render.com/docs/blueprint-spec
+# Despliegue: Render Dashboard → New → Blueprint → seleccionar este repositorio.
+#
+# Topología (plan gratuito):
+#   · 5 Web Services Docker (uno por microservicio), región Oregon.
+#   · 1 Key Value (Redis compatible) accesible solo por red privada: broker de
+#     eventos (Redis Streams), caché distribuida y Service Registry.
+# En el plan gratuito los web services no reciben tráfico privado, por eso se
+# comunican por sus URL públicas, que cada servicio publica en el registro
+# al arrancar (RENDER_EXTERNAL_URL).
+
+envVarGroups:
+  - name: frescoruta-shared
+    envVars:
+      - key: INTERNAL_TOKEN        # secreto compartido entre servicios
+        generateValue: true
+      - key: APP_ENV
+        value: render
+      - key: LOG_LEVEL
+        value: INFO
+
+services:
+  - type: keyvalue
+    name: frescoruta-kv
+    region: oregon
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []                # sin acceso externo: solo red privada
+
+  - type: web
+    name: frescoruta-gateway
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./services/gateway/Dockerfile
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["services/gateway/**", "common/**"]
+    envVars:
+      - fromGroup: frescoruta-shared
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: frescoruta-kv, property: connectionString }
+      - key: GATEWAY_API_KEY       # cámbiela en el Dashboard tras el primer despliegue
+        value: frescoruta-demo-key
+      - key: PROXY_TIMEOUT_S       # margen para el arranque en frío de los servicios gratuitos
+        value: "90"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "240"
+
+  - type: web
+    name: frescoruta-catalog
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./services/catalog/Dockerfile
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["services/catalog/**", "common/**"]
+    envVars:
+      - fromGroup: frescoruta-shared
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: frescoruta-kv, property: connectionString }
+
+  - type: web
+    name: frescoruta-orders
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./services/orders/Dockerfile
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["services/orders/**", "common/**"]
+    envVars:
+      - fromGroup: frescoruta-shared
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: frescoruta-kv, property: connectionString }
+      - key: DOWNSTREAM_TIMEOUT_S
+        value: "60"
+      - key: CB_FAILURE_THRESHOLD
+        value: "3"
+      - key: CB_RECOVERY_TIMEOUT_S
+        value: "20"
+
+  - type: web
+    name: frescoruta-payments
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./services/payments/Dockerfile
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["services/payments/**", "common/**"]
+    envVars:
+      - fromGroup: frescoruta-shared
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: frescoruta-kv, property: connectionString }
+      - key: PAYMENT_FAILURE_RATE
+        value: "0"
+
+  - type: web
+    name: frescoruta-notifications
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./services/notifications/Dockerfile
+    healthCheckPath: /health
+    buildFilter:
+      paths: ["services/notifications/**", "common/**"]
+    envVars:
+      - fromGroup: frescoruta-shared
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: frescoruta-kv, property: connectionString }

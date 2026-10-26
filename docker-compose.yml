@@ -1,0 +1,92 @@
+# Entorno local completo: 5 microservicios + Redis (broker de eventos, caché y registro).
+#   docker compose up --build          -> panel en http://localhost:8000
+#   docker compose up --build --scale notification-service=2   (Competing Consumers)
+name: frescoruta
+
+x-service-env: &service-env
+  REDIS_URL: redis://redis:6379/0
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN:-compose-internal-token}
+  APP_ENV: docker-compose
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  # Respaldo estático si el Service Registry (Redis) no responde.
+  CATALOG_SERVICE_URL: http://catalog-service:8001
+  ORDER_SERVICE_URL: http://order-service:8002
+  PAYMENT_SERVICE_URL: http://payment-service:8003
+  NOTIFICATION_SERVICE_URL: http://notification-service:8004
+
+x-service: &service
+  restart: unless-stopped
+  depends_on:
+    redis:
+      condition: service_healthy
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--protected-mode", "no"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  catalog-service:
+    <<: *service
+    build: { context: ., dockerfile: services/catalog/Dockerfile }
+    environment:
+      <<: *service-env
+      SERVICE_URL: http://catalog-service:8001
+      CACHE_TTL_SECONDS: 30
+    volumes:
+      - catalog-data:/app/data
+
+  order-service:
+    <<: *service
+    build: { context: ., dockerfile: services/orders/Dockerfile }
+    environment:
+      <<: *service-env
+      SERVICE_URL: http://order-service:8002
+      CB_FAILURE_THRESHOLD: 3
+      CB_RECOVERY_TIMEOUT_S: 20
+    volumes:
+      - orders-data:/app/data
+
+  payment-service:
+    <<: *service
+    build: { context: ., dockerfile: services/payments/Dockerfile }
+    environment:
+      <<: *service-env
+      SERVICE_URL: http://payment-service:8003
+      PAYMENT_FAILURE_RATE: ${PAYMENT_FAILURE_RATE:-0}
+    volumes:
+      - payments-data:/app/data
+
+  notification-service:
+    <<: *service
+    build: { context: ., dockerfile: services/notifications/Dockerfile }
+    environment:
+      <<: *service-env
+      SERVICE_URL: http://notification-service:8004
+    volumes:
+      - notifications-data:/app/data
+
+  api-gateway:
+    <<: *service
+    build: { context: ., dockerfile: services/gateway/Dockerfile }
+    environment:
+      <<: *service-env
+      SERVICE_URL: http://localhost:8000
+      GATEWAY_API_KEY: ${GATEWAY_API_KEY:-frescoruta-demo-key}
+      RATE_LIMIT_PER_MINUTE: 240
+      RATE_LIMIT_BURST: 40
+    ports:
+      - "8000:8000"
+
+volumes:
+  redis-data:
+  catalog-data:
+  orders-data:
+  payments-data:
+  notifications-data:

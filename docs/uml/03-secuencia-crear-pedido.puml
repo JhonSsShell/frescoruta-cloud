@@ -1,26 +1,25 @@
 @startuml secuencia-crear-pedido
 !include _estilo.iuml
 skinparam dpi 150
-skinparam ParticipantPadding 12
+skinparam ParticipantPadding 2
+skinparam maxMessageSize 110
 skinparam BoxPadding 8
 autonumber "<b>0."
 hide footbox
-title Diagrama de secuencia — Crear pedido (Saga orquestada con compensación)
+title Diagrama de secuencia — Crear pedido (1/2): entrada, reserva (T1) y pago (T2)
 
 actor "Cliente B2B" as C
-box "Render · servicios web (HTTPS)" #F7FAF8
 participant "API Gateway" as GW
 participant "order-service\n«orquestador»" as ORD
-participant "catalog-service" as CAT
-participant "payment-service" as PAY
-participant "notification-service" as NOT
-end box
-queue "Redis Streams\nfrescoruta:events" as BUS
 database "orders.db" as ODB
+participant "catalog-\nservice" as CAT
+participant "payment-\nservice" as PAY
+queue "Redis\nStreams" as BUS
+participant "notification-\nservice" as NOT
 
 C -> GW : POST /api/orders\nX-API-Key, Idempotency-Key
 activate GW
-GW -> GW : validar API key\ntoken bucket (rate limit)\nX-Request-ID
+GW -> GW : API key, rate\nlimit, X-Request-ID
 GW -> ORD : POST /orders\n+ X-Internal-Token
 activate ORD
 ORD -> ODB : INSERT pedido (PENDING)
@@ -29,7 +28,7 @@ ORD -> BUS : XADD order.created
 == T1 · Reservar inventario ==
 ORD -> CAT : POST /reservations {order_id, items}
 activate CAT
-CAT -> CAT : UPDATE stock = stock − q\nWHERE stock ≥ q (atómico)
+CAT -> CAT : UPDATE … WHERE\nstock ≥ q (atómico)
 alt stock suficiente
   CAT --> ORD : 201 reserva {id, precios, total}
   ORD -> ODB : guardar total y paso reserve_stock
@@ -49,11 +48,12 @@ loop hasta 3 intentos con backoff exponencial y jitter
   deactivate PAY
 end
 note right of ORD
-  Circuit Breaker «payment-service»:
-  3 fallos técnicos → OPEN (falla rápido 20 s)
-  → HALF_OPEN (prueba) → CLOSED
+  Circuit Breaker: 3 fallos
+  técnicos → OPEN (20 s)
+  → HALF_OPEN → CLOSED
 end note
 
+newpage Diagrama de secuencia — Crear pedido (2/2): confirmación (T3), compensación y eventos
 alt pago aprobado
   == T3 · Confirmar inventario ==
   ORD -> CAT : POST /reservations/{id}/commit
@@ -77,7 +77,7 @@ deactivate GW
 == Asíncrono · Publicador/Suscriptor ==
 BUS -> NOT : XREADGROUP (consumer group)
 activate NOT
-NOT -> NOT : ¿(event_id, canal) ya procesado?\n(consumidor idempotente)
+NOT -> NOT : ¿evento ya\nprocesado? (idempotente)
 NOT -> NOT : enviar correo / WhatsApp
 NOT -> BUS : XACK
 deactivate NOT

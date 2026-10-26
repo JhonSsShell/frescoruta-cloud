@@ -17,7 +17,7 @@ rectangle "GitHub" as GH {
   node "GitHub Actions «CI»\nruff · pytest · docker build" as CI
 }
 
-rectangle "Render · región Oregon · plan gratuito" as RENDER {
+rectangle "Render · región Oregon · plan gratuito (servicios públicos HTTPS; Key Value solo red privada)" as RENDER {
   node "frescoruta-gateway\n«web service Docker»" as NGW {
     artifact "gateway_service\nFastAPI + Uvicorn" as AGW
   }
@@ -59,15 +59,9 @@ NORD ..> NKV : TCP 6379 (privado)\nXADD · registro
 NCAT ..> NKV : caché · XADD
 NPAY ..> NKV : XADD
 NKV ..> NNOT : XREADGROUP\n(consumer group)
-REPO --> CI : push / PR
+REPO -right-> CI : push / PR
 STREAM -[hidden]right- REG
 REG -[hidden]right- CACHE
 REPO ==> RENDER : Blueprint · auto-deploy\n(5 imágenes Docker)
 
-note right of NKV
-  Los web services gratuitos no reciben tráfico
-  privado: cada servicio publica su
-  RENDER_EXTERNAL_URL en el Service Registry
-  y los demás la resuelven por nombre lógico.
-end note
 @enduml

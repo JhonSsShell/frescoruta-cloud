@@ -69,9 +69,11 @@ resiliente**, desplegable en la nube, que:
 
 Diagramas UML completos en [`docs/uml`](docs/uml):
 [casos de uso](docs/uml/casos-de-uso.png) ·
-[clases (dominio)](docs/uml/clases-dominio.png) ·
+[clases: pedidos y catálogo](docs/uml/clases-pedidos-catalogo.png) ·
+[clases: pagos, notificaciones y gateway](docs/uml/clases-pagos-notificaciones.png) ·
 [clases (chasis)](docs/uml/clases-chasis.png) ·
-[secuencia de la saga](docs/uml/secuencia-crear-pedido.png) ·
+[secuencia de la saga 1/2](docs/uml/secuencia-crear-pedido.png) ·
+[2/2](docs/uml/secuencia-crear-pedido_001.png) ·
 [despliegue](docs/uml/despliegue.png).
 La explicación detallada está en [`docs/arquitectura.md`](docs/arquitectura.md).
 

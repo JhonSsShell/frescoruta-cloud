@@ -1,0 +1,93 @@
+@startuml clases-pagos-notificaciones
+!include _estilo.iuml
+skinparam dpi 150
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
+hide empty members
+title Diagrama de clases (2/2) — pagos, notificaciones y API Gateway
+
+package "payment-service" as PAY {
+  class Payment <<Entity>> {
+    +id : str
+    +order_id : str
+    +idempotency_key : str {unique}
+    +amount : int
+    +status : APPROVED | DECLINED | REFUNDED
+  }
+  class PaymentService <<Service>> {
+    +process(request, idempotency_key)
+    +refund(payment_id)
+  }
+  interface PaymentStrategy <<Strategy>> {
+    +authorize(order_id, amount) : PaymentDecision
+  }
+  class CardPaymentStrategy
+  class PsePaymentStrategy
+  class CashOnDeliveryStrategy
+  class PaymentStrategyFactory <<Factory>> {
+    +register(strategy)
+    +get(method) : PaymentStrategy
+  }
+  class ChaosMonkey <<Fault Injection>> {
+    +failure_rate : float
+    +maybe_fail()
+  }
+  PaymentService --> PaymentStrategyFactory
+  PaymentService --> ChaosMonkey
+  PaymentService ..> Payment
+  PaymentStrategyFactory o-- "1..*" PaymentStrategy
+  PaymentStrategy <|.. CardPaymentStrategy
+  PaymentStrategy <|.. PsePaymentStrategy
+  PaymentStrategy <|.. CashOnDeliveryStrategy
+}
+
+package "notification-service" as NOT {
+  class NotificationDispatcher <<Subscriber>> {
+    +handle(event : Event)
+  }
+  class Rule {
+    +recipient(payload)
+    +subject(payload)
+    +message(payload)
+  }
+  interface NotificationChannel {
+    +send(recipient, subject, message) : str
+  }
+  class EmailChannel
+  class WhatsAppChannel
+  class Notification <<Entity>> {
+    +event_id : str
+    +channel : str
+    +recipient : str
+    +message : str
+  }
+  note bottom of Notification : (event_id, channel) único\n→ consumidor idempotente
+  NotificationDispatcher o-- "*" Rule
+  Rule --> NotificationChannel
+  NotificationChannel <|.. EmailChannel
+  NotificationChannel <|.. WhatsAppChannel
+  NotificationDispatcher ..> Notification : «persiste»
+}
+
+package "api-gateway" as GW {
+  class Route {
+    +method : str
+    +pattern : Regex
+    +service : str
+    +target : str
+    +protected : bool
+  }
+  class TokenBucketRateLimiter <<Throttling>> {
+    +capacity : int
+    +refill_per_second : float
+    +allow(client_id) : (bool, int, float)
+  }
+  class GatewayMetrics {
+    +record(service, status, latency)
+    +snapshot() : dict
+  }
+}
+
+GatewayMetrics -[hidden]down-> NotificationDispatcher
+@enduml

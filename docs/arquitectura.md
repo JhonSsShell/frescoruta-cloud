@@ -28,8 +28,8 @@ entre servicios es **eventual** y se garantiza con una **Saga orquestada**.
 | Vista | Artefacto |
 |---|---|
 | Escenarios | [Casos de uso](uml/casos-de-uso.png) |
-| Lógica | [Clases de dominio](uml/clases-dominio.png), [chasis](uml/clases-chasis.png) |
-| Procesos | [Secuencia de la saga](uml/secuencia-crear-pedido.png) |
+| Lógica | [Clases: pedidos y catálogo](uml/clases-pedidos-catalogo.png), [pagos y notificaciones](uml/clases-pagos-notificaciones.png), [chasis](uml/clases-chasis.png) |
+| Procesos | [Secuencia de la saga 1/2](uml/secuencia-crear-pedido.png) y [2/2](uml/secuencia-crear-pedido_001.png) |
 | Desarrollo | [Componentes](uml/vista-componentes.png) y estructura del repositorio |
 | Física | [Despliegue en Render](uml/despliegue.png) |
 

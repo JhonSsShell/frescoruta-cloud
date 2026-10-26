@@ -1,0 +1,118 @@
+@startuml clases-pedidos-catalogo
+!include _estilo.iuml
+skinparam dpi 150
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 50
+hide empty members
+title Diagrama de clases (1/2) — pedidos, saga y catálogo
+
+package "order-service" as ORD {
+  class Order <<Aggregate Root>> {
+    +id : str  «PED-XXXXXXXX»
+    +customer_name : str
+    +customer_email : str
+    +delivery_city : str
+    +payment_method : str
+    +status : OrderStatus
+    +total : int
+    +idempotency_key : str {unique}
+    +reservation_id : str
+    +payment_id : str
+  }
+  class OrderItem {
+    +product_id : str
+    +unit_price : int
+    +quantity : int
+    +subtotal() : int
+  }
+  class SagaStep {
+    +step : str
+    +status : StepStatus
+    +detail : str
+    +at : datetime
+  }
+  enum OrderStatus {
+    PENDING
+    CONFIRMED
+    REJECTED
+  }
+  class CreateOrderSaga <<Orchestrator>> {
+    +run(order_id) : Order
+    -compensate_release(order)
+    -compensate_refund(order)
+    -reject(order_id, reason)
+  }
+  interface CatalogPort <<Port>> {
+    +reserve(order_id, items)
+    +commit(reservation_id)
+    +release(reservation_id)
+  }
+  interface PaymentPort <<Port>> {
+    +pay(order_id, amount, method)
+    +refund(payment_id)
+  }
+  class HttpCatalogClient <<Adapter>>
+  class HttpPaymentClient <<Adapter>>
+  class OrderRepository <<Repository>>
+  Order "1" *-- "1..*" OrderItem
+  Order "1" *-- "0..*" SagaStep : bitácora
+  Order --> OrderStatus
+  CreateOrderSaga --> CatalogPort
+  CreateOrderSaga --> PaymentPort
+  CreateOrderSaga --> OrderRepository
+  CatalogPort <|.. HttpCatalogClient
+  PaymentPort <|.. HttpPaymentClient
+}
+
+package "catalog-service" as CAT {
+  class Product <<Entity>> {
+    +id : str  «SKU»
+    +name : str
+    +category : str
+    +unit : str
+    +price : int  «COP»
+    +stock : int
+    +low_stock_threshold : int
+    +is_low_stock() : bool
+  }
+  class Reservation <<Entity>> {
+    +id : UUID
+    +order_id : str {unique}
+    +status : ReservationStatus
+  }
+  class ReservationItem {
+    +product_id : str
+    +unit_price : int
+    +quantity : int
+  }
+  enum ReservationStatus {
+    RESERVED
+    COMMITTED
+    RELEASED
+  }
+  class ProductRepository <<Repository>> {
+    +list(category) : Product[*]
+    +try_decrement_stock(id, qty) : bool
+    +increment_stock(id, qty)
+  }
+  class CatalogService <<Service>> {
+    +list_products(category) : (list, hit)
+    +reserve(order_id, lines) : Reservation
+    +commit(reservation_id)
+    +release(reservation_id)
+  }
+  Reservation "1" *-- "1..*" ReservationItem
+  Reservation --> ReservationStatus
+  CatalogService --> ProductRepository
+  ProductRepository ..> Product
+  CatalogService ..> Reservation : «crea»
+}
+
+package "payment-service" as PAYX {
+  class PaymentService <<Service>>
+}
+HttpCatalogClient ..> CatalogService : HTTP /reservations
+HttpPaymentClient ..> PaymentService : HTTP /payments\n+ Idempotency-Key
+Order ..> Reservation : reservation_id
+@enduml

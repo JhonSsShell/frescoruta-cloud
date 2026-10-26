@@ -7,6 +7,7 @@ auto-registro en el Service Registry y ciclo de vida del bus de eventos.
 from __future__ import annotations
 
 import logging
+import socket
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -53,7 +54,7 @@ def build_runtime(
     bus = event_bus or create_event_bus(
         client,  # type: ignore[arg-type]
         group=settings.service_name,
-        consumer=env_str("CONSUMER_NAME", "consumer-1"),
+        consumer=env_str("CONSUMER_NAME") or socket.gethostname(),
     )
     return Runtime(
         settings=settings,

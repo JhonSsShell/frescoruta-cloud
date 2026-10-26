@@ -201,6 +201,16 @@ class RedisStreamEventBus(EventBus):
         self.client.xack(self.stream, self.group, message_id)
         self._failures.pop(message_id, None)
 
+    def claim_orphans(self, min_idle_ms: int = 60_000) -> int:
+        """Reclama mensajes de consumidores caídos (p. ej. una instancia redesplegada)."""
+        try:
+            _next, claimed, *_ = self.client.xautoclaim(
+                self.stream, self.group, self.consumer, min_idle_time=min_idle_ms, count=50
+            )
+        except redis.ResponseError:  # Redis < 6.2 no soporta XAUTOCLAIM
+            return 0
+        return len(claimed)
+
     def _run(self) -> None:
         backoff = 1.0
         last_rescan = 0.0
@@ -208,6 +218,7 @@ class RedisStreamEventBus(EventBus):
             try:
                 self._ensure_group()
                 if time.monotonic() - last_rescan > self.pending_rescan_s:
+                    self.claim_orphans()
                     self.poll_once("0")  # reintenta mensajes pendientes (at-least-once)
                     last_rescan = time.monotonic()
                 self.poll_once(">")

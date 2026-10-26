@@ -50,6 +50,21 @@ def test_redis_stream_bus_sends_poison_message_to_dlq():
     assert client.xpending(bus.stream, bus.group)["pending"] == 0
 
 
+def test_orphan_messages_are_claimed_by_another_consumer():
+    client = fakeredis.FakeRedis(decode_responses=True)
+    dead = RedisStreamEventBus(client, group="notification-service", consumer="old", block_ms=10)
+    dead._ensure_group()
+    dead.publish(Event(type="order.confirmed", source="t", payload={}))
+    client.xreadgroup(dead.group, "old", {dead.stream: ">"}, count=10)  # leído pero sin ACK
+    alive = RedisStreamEventBus(client, group="notification-service", consumer="new", block_ms=10)
+    received = []
+    alive.subscribe(["*"], received.append)
+    assert alive.claim_orphans(min_idle_ms=0) == 1
+    alive.poll_once("0")
+    assert len(received) == 1
+    assert client.xpending(alive.stream, alive.group)["pending"] == 0
+
+
 def test_in_memory_cache_expires():
     now = {"t": 0}
     cache = InMemoryTTLCache(clock=lambda: now["t"])

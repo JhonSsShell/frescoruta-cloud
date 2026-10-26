@@ -61,11 +61,15 @@ def build_runtime(
         registry=registry,
         resolver=resolver or ServiceResolver(registry),
         event_bus=bus,
-        agent=RegistrationAgent(registry, settings.service_name, settings.public_url, settings.version),
+        agent=RegistrationAgent(
+            registry, settings.service_name, settings.public_url, settings.version
+        ),
     )
 
 
-def create_service_app(runtime: Runtime, *, title: str, description: str) -> FastAPI:
+def create_service_app(
+    runtime: Runtime, *, title: str, description: str, internal_auth: bool = True
+) -> FastAPI:
     settings = runtime.settings
     log = configure_logging(settings.service_name, settings.log_level)
 
@@ -88,7 +92,8 @@ def create_service_app(runtime: Runtime, *, title: str, description: str) -> Fas
 
     app = FastAPI(title=title, description=description, version="1.0.0", lifespan=lifespan)
     # El último middleware agregado es el más externo: la correlación envuelve todo.
-    app.add_middleware(InternalAuthMiddleware, token=settings.internal_token)
+    if internal_auth:
+        app.add_middleware(InternalAuthMiddleware, token=settings.internal_token)
     app.add_middleware(CorrelationIdMiddleware)
     app.state.runtime = runtime
     return app

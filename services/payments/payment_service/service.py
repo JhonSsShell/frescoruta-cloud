@@ -89,7 +89,9 @@ class PaymentService:
             session.flush()
             dto = PaymentOut.model_validate(payment)
 
-        event_type = "payment.approved" if dto.status == PaymentStatus.APPROVED else "payment.declined"
+        event_type = (
+            "payment.approved" if dto.status == PaymentStatus.APPROVED else "payment.declined"
+        )
         self.event_bus.publish(Event(type=event_type, source=SOURCE, payload=dto.model_dump()))
         log.info(f"Pago {dto.id} del pedido {dto.order_id}: {dto.status}")
         return dto, False
@@ -106,7 +108,9 @@ class PaymentService:
             payment.status = PaymentStatus.REFUNDED
             dto = PaymentOut.model_validate(payment)
         if changed:
-            self.event_bus.publish(Event(type="payment.refunded", source=SOURCE, payload=dto.model_dump()))
+            self.event_bus.publish(
+                Event(type="payment.refunded", source=SOURCE, payload=dto.model_dump())
+            )
         return dto
 
     def get(self, payment_id: str) -> PaymentOut:

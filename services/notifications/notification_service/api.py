@@ -75,7 +75,9 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
     @app.get("/notifications", response_model=list[NotificationOut], tags=["notificaciones"])
     def list_notifications(limit: int = 30, event_type: str | None = None):
         with session_factory() as session:
-            stmt = select(Notification).order_by(Notification.created_at.desc()).limit(min(limit, 200))
+            stmt = (
+                select(Notification).order_by(Notification.created_at.desc()).limit(min(limit, 200))
+            )
             if event_type:
                 stmt = stmt.where(Notification.event_type == event_type)
             return [NotificationOut.model_validate(n) for n in session.scalars(stmt)]

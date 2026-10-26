@@ -44,4 +44,8 @@ class OrderRepository:
             by_status[status] = count
             if status == OrderStatus.CONFIRMED:
                 revenue = int(total)
-        return {"by_status": by_status, "total": sum(by_status.values()), "confirmed_revenue": revenue}
+        return {
+            "by_status": by_status,
+            "total": sum(by_status.values()),
+            "confirmed_revenue": revenue,
+        }

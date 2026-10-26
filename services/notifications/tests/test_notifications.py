@@ -21,7 +21,10 @@ CONFIRMED = {
 def env():
     bus = InMemoryEventBus()
     settings = Settings(
-        service_name="notification-service", port=8004, public_url="http://t", database_url="sqlite://"
+        service_name="notification-service",
+        port=8004,
+        public_url="http://t",
+        database_url="sqlite://",
     )
     runtime = build_runtime(settings, redis_client=None, event_bus=bus)
     with TestClient(create_app(settings, runtime)) as client:
@@ -53,7 +56,12 @@ def test_stock_low_notifies_purchasing(env):
         Event(
             type="stock.low",
             source="catalog-service",
-            payload={"product_id": "FR-009", "name": "Mora de Castilla", "stock": 15, "threshold": 20},
+            payload={
+                "product_id": "FR-009",
+                "name": "Mora de Castilla",
+                "stock": 15,
+                "threshold": 20,
+            },
         )
     )
     [notification] = client.get("/notifications", params={"event_type": "stock.low"}).json()

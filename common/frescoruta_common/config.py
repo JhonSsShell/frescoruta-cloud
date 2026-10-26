@@ -57,9 +57,7 @@ class Settings:
         port = env_int("PORT", default_port)
         # Render expone RENDER_EXTERNAL_URL; en Docker Compose se usa SERVICE_URL.
         public_url = (
-            env_str("SERVICE_URL")
-            or env_str("RENDER_EXTERNAL_URL")
-            or f"http://localhost:{port}"
+            env_str("SERVICE_URL") or env_str("RENDER_EXTERNAL_URL") or f"http://localhost:{port}"
         )
         return cls(
             service_name=service_name,

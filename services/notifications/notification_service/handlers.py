@@ -61,7 +61,9 @@ def default_rules() -> dict[str, list[Rule]]:
                 email,
                 lambda p: p["customer_email"],
                 lambda p: f"No pudimos procesar el pedido {p['order_id']}",
-                lambda p: f"Hola {p['customer_name']}, tu pedido no fue procesado: {p.get('reason')}.",
+                lambda p: (
+                    f"Hola {p['customer_name']}, tu pedido no fue procesado: {p.get('reason')}."
+                ),
             )
         ],
         "payment.refunded": [

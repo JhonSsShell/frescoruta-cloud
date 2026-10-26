@@ -104,7 +104,9 @@ class CatalogService:
         with self.session_factory() as session:
             product = ProductRepository(session).get(product_id)
             if not product:
-                raise ProductNotFoundError(f"Producto {product_id} no existe", product_id=product_id)
+                raise ProductNotFoundError(
+                    f"Producto {product_id} no existe", product_id=product_id
+                )
             return ProductOut.model_validate(product)
 
     # -- comandos ---------------------------------------------------------------

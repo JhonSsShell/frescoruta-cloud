@@ -130,7 +130,9 @@ class CreateOrderSaga:
         except TECHNICAL_ERRORS as exc:
             self._step(order_id, PROCESS_PAYMENT, StepStatus.FAILED, _technical_reason(exc))
             self._compensate_release(order)
-            return self._reject(order_id, "Pasarela de pagos no disponible; no se realizó ningún cobro")
+            return self._reject(
+                order_id, "Pasarela de pagos no disponible; no se realizó ningún cobro"
+            )
 
         if payment.get("status") != "APPROVED":
             reason = payment.get("reason") or "rechazado por la entidad"
@@ -169,10 +171,14 @@ class CreateOrderSaga:
             return
         try:
             self.catalog.release(order.reservation_id)
-            self._step(order.id, RELEASE_STOCK, StepStatus.COMPENSATED, "Stock devuelto al inventario")
+            self._step(
+                order.id, RELEASE_STOCK, StepStatus.COMPENSATED, "Stock devuelto al inventario"
+            )
         except Exception as exc:  # noqa: BLE001
             log.error(f"Compensación pendiente para la reserva {order.reservation_id}: {exc}")
-            self._step(order.id, RELEASE_STOCK, StepStatus.FAILED, f"Pendiente de reconciliación: {exc}")
+            self._step(
+                order.id, RELEASE_STOCK, StepStatus.FAILED, f"Pendiente de reconciliación: {exc}"
+            )
 
     def _compensate_refund(self, order: OrderOut) -> None:
         if not order.payment_id:
@@ -182,7 +188,9 @@ class CreateOrderSaga:
             self._step(order.id, REFUND_PAYMENT, StepStatus.COMPENSATED, "Pago reembolsado")
         except Exception as exc:  # noqa: BLE001
             log.error(f"Reembolso pendiente para el pago {order.payment_id}: {exc}")
-            self._step(order.id, REFUND_PAYMENT, StepStatus.FAILED, f"Pendiente de reconciliación: {exc}")
+            self._step(
+                order.id, REFUND_PAYMENT, StepStatus.FAILED, f"Pendiente de reconciliación: {exc}"
+            )
 
     def _reject(self, order_id: str, reason: str) -> OrderOut:
         def reject(o: Order, r: OrderRepository) -> None:

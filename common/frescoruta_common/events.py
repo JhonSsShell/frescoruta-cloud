@@ -68,10 +68,10 @@ class EventBus(ABC):
     def subscribe(self, event_types: Iterable[str], handler: Handler) -> None:
         self._handlers.append((set(event_types) or {WILDCARD}, handler))
 
-    def start(self) -> None:  # pragma: no cover - comportamiento por defecto
+    def start(self) -> None:  # noqa: B027 - implementación opcional
         """Inicia la recepción de eventos (si aplica)."""
 
-    def stop(self) -> None:  # pragma: no cover - comportamiento por defecto
+    def stop(self) -> None:  # noqa: B027 - implementación opcional
         """Detiene la recepción de eventos (si aplica)."""
 
     @property
@@ -133,7 +133,9 @@ class RedisStreamEventBus(EventBus):
             self.client.xadd(
                 self.stream, {"event": event.to_json()}, maxlen=self.maxlen, approximate=True
             )
-            log.info(f"Evento publicado {event.type}", extra={"extra_fields": {"event_id": event.id}})
+            log.info(
+                f"Evento publicado {event.type}", extra={"extra_fields": {"event_id": event.id}}
+            )
         except redis.RedisError:
             # El flujo de negocio no se detiene si el broker falla. En producción
             # se usaría Transactional Outbox para garantizar la publicación.
@@ -193,7 +195,9 @@ class RedisStreamEventBus(EventBus):
             self._dead_letter(message_id, fields)
 
     def _dead_letter(self, message_id: str, fields: dict) -> None:
-        self.client.xadd(self.dlq_stream, {**fields, "original_id": message_id, "group": self.group})
+        self.client.xadd(
+            self.dlq_stream, {**fields, "original_id": message_id, "group": self.group}
+        )
         self.client.xack(self.stream, self.group, message_id)
         self._failures.pop(message_id, None)
 

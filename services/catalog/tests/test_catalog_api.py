@@ -65,7 +65,8 @@ def test_insufficient_stock_is_all_or_nothing(client):
 
 def test_unknown_product_returns_404(client):
     resp = client.post(
-        "/reservations", json={"order_id": "PED-4", "items": [{"product_id": "FR-999", "quantity": 1}]}
+        "/reservations",
+        json={"order_id": "PED-4", "items": [{"product_id": "FR-999", "quantity": 1}]},
     )
     assert resp.status_code == 404
     assert resp.json()["code"] == "PRODUCT_NOT_FOUND"
@@ -73,7 +74,8 @@ def test_unknown_product_returns_404(client):
 
 def test_release_compensates_and_is_idempotent(client):
     res = client.post(
-        "/reservations", json={"order_id": "PED-5", "items": [{"product_id": "FR-005", "quantity": 4}]}
+        "/reservations",
+        json={"order_id": "PED-5", "items": [{"product_id": "FR-005", "quantity": 4}]},
     ).json()
     assert stock_of(client, "FR-005") == 396
     assert client.post(f"/reservations/{res['id']}/release").json()["status"] == "RELEASED"
@@ -83,7 +85,8 @@ def test_release_compensates_and_is_idempotent(client):
 
 def test_commit_then_release_is_rejected(client):
     res = client.post(
-        "/reservations", json={"order_id": "PED-6", "items": [{"product_id": "FR-006", "quantity": 1}]}
+        "/reservations",
+        json={"order_id": "PED-6", "items": [{"product_id": "FR-006", "quantity": 1}]},
     ).json()
     assert client.post(f"/reservations/{res['id']}/commit").json()["status"] == "COMMITTED"
     assert client.post(f"/reservations/{res['id']}/release").status_code == 409
@@ -91,7 +94,8 @@ def test_commit_then_release_is_rejected(client):
 
 def test_low_stock_event_is_published(client, bus):
     client.post(
-        "/reservations", json={"order_id": "PED-7", "items": [{"product_id": "FR-009", "quantity": 10}]}
+        "/reservations",
+        json={"order_id": "PED-7", "items": [{"product_id": "FR-009", "quantity": 10}]},
     )
     events = [e for e in bus.published if e.type == "stock.low"]
     assert events and events[0].payload["product_id"] == "FR-009"
@@ -99,7 +103,14 @@ def test_low_stock_event_is_published(client, bus):
 
 
 def test_create_product_and_adjust_stock(client):
-    new = {"id": "FR-100", "name": "Fresa", "category": "Frutas", "unit": "kg", "price": 9000, "stock": 50}
+    new = {
+        "id": "FR-100",
+        "name": "Fresa",
+        "category": "Frutas",
+        "unit": "kg",
+        "price": 9000,
+        "stock": 50,
+    }
     assert client.post("/products", json=new).status_code == 201
     assert client.post("/products", json=new).status_code == 409
     assert client.patch("/products/FR-100/stock", json={"delta": 25}).json()["stock"] == 75

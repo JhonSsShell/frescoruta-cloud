@@ -113,7 +113,12 @@ class RegistrationAgent:
     """Hilo en segundo plano que registra el servicio y envía latidos."""
 
     def __init__(
-        self, registry: ServiceRegistry, name: str, url: str, version: str = "", interval: float = 30
+        self,
+        registry: ServiceRegistry,
+        name: str,
+        url: str,
+        version: str = "",
+        interval: float = 30,
     ) -> None:
         self.registry = registry
         self.name = name

@@ -95,7 +95,9 @@ def create_app(settings: Settings | None = None, runtime: Runtime | None = None)
         response.status_code = 201 if created else 200
         return reservation
 
-    @app.post("/reservations/{reservation_id}/commit", response_model=ReservationOut, tags=["reservas"])
+    @app.post(
+        "/reservations/{reservation_id}/commit", response_model=ReservationOut, tags=["reservas"]
+    )
     def commit(reservation_id: str):
         return service.commit(reservation_id)
 

@@ -20,9 +20,14 @@ class FakeCatalog(CatalogPort):
 
     def reserve(self, order_id, items):
         shortages = [
-            {"product_id": i["product_id"], "name": PRICES[i["product_id"]][0],
-             "requested": i["quantity"], "available": self.stock[i["product_id"]]}
-            for i in items if self.stock[i["product_id"]] < i["quantity"]
+            {
+                "product_id": i["product_id"],
+                "name": PRICES[i["product_id"]][0],
+                "requested": i["quantity"],
+                "available": self.stock[i["product_id"]],
+            }
+            for i in items
+            if self.stock[i["product_id"]] < i["quantity"]
         ]
         if shortages:
             raise InsufficientStockError("Stock insuficiente", {"shortages": shortages})
@@ -30,12 +35,20 @@ class FakeCatalog(CatalogPort):
             self.stock[i["product_id"]] -= i["quantity"]
         rid = f"res-{len(self.reservations) + 1}"
         lines = [
-            {"product_id": i["product_id"], "product_name": PRICES[i["product_id"]][0],
-             "unit_price": PRICES[i["product_id"]][1], "quantity": i["quantity"]}
+            {
+                "product_id": i["product_id"],
+                "product_name": PRICES[i["product_id"]][0],
+                "unit_price": PRICES[i["product_id"]][1],
+                "quantity": i["quantity"],
+            }
             for i in items
         ]
         self.reservations[rid] = items
-        return {"id": rid, "items": lines, "total": sum(x["unit_price"] * x["quantity"] for x in lines)}
+        return {
+            "id": rid,
+            "items": lines,
+            "total": sum(x["unit_price"] * x["quantity"] for x in lines),
+        }
 
     def commit(self, reservation_id):
         if self.fail_commit:
@@ -78,7 +91,9 @@ def env():
     bus = InMemoryEventBus()
     breakers = {
         "catalog-service": CircuitBreaker("catalog-service", failure_threshold=2),
-        "payment-service": CircuitBreaker("payment-service", failure_threshold=2, recovery_timeout=60),
+        "payment-service": CircuitBreaker(
+            "payment-service", failure_threshold=2, recovery_timeout=60
+        ),
     }
     catalog = FakeCatalog()
     payments = FakePayments(breakers["payment-service"])
@@ -88,4 +103,10 @@ def env():
     runtime = build_runtime(settings, redis_client=None, event_bus=bus)
     app = create_app(settings, runtime, catalog, payments, breakers)
     with TestClient(app) as client:
-        yield {"client": client, "bus": bus, "catalog": catalog, "payments": payments, "breakers": breakers}
+        yield {
+            "client": client,
+            "bus": bus,
+            "catalog": catalog,
+            "payments": payments,
+            "breakers": breakers,
+        }

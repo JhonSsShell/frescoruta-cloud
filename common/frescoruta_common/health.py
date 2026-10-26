@@ -39,7 +39,9 @@ def build_health_router(
         for name, check in checks.items():
             try:
                 outcome = check()
-                results[name] = outcome if isinstance(outcome, str) else ("UP" if outcome else "DOWN")
+                results[name] = (
+                    outcome if isinstance(outcome, str) else ("UP" if outcome else "DOWN")
+                )
             except Exception:  # noqa: BLE001
                 results[name] = "DOWN"
         failing_critical = [n for n in critical if results.get(n) == "DOWN"]

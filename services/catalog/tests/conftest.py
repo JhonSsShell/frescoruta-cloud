@@ -14,7 +14,10 @@ def bus():
 @pytest.fixture
 def client(bus):
     settings = Settings(
-        service_name="catalog-service", port=8001, public_url="http://test", database_url="sqlite://"
+        service_name="catalog-service",
+        port=8001,
+        public_url="http://test",
+        database_url="sqlite://",
     )
     runtime = build_runtime(settings, redis_client=None, event_bus=bus)
     with TestClient(create_app(settings, runtime)) as test_client:

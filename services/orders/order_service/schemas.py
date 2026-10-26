@@ -16,7 +16,9 @@ class OrderLineIn(BaseModel):
 
 class OrderCreate(BaseModel):
     customer_name: str = Field(min_length=2, max_length=120, examples=["Restaurante La Huerta"])
-    customer_email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", examples=["compras@lahuerta.co"])
+    customer_email: str = Field(
+        pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", examples=["compras@lahuerta.co"]
+    )
     delivery_city: City = "Bogotá"
     payment_method: PaymentMethod = "CARD"
     items: list[OrderLineIn] = Field(min_length=1, max_length=50)

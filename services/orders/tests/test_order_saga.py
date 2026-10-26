@@ -32,9 +32,11 @@ def test_happy_path_confirms_order(env):
 
 
 def test_insufficient_stock_rejects_without_payment(env):
-    order = env["client"].post(
-        "/orders", json={**ORDER, "items": [{"product_id": "FR-005", "quantity": 50}]}
-    ).json()
+    order = (
+        env["client"]
+        .post("/orders", json={**ORDER, "items": [{"product_id": "FR-005", "quantity": 50}]})
+        .json()
+    )
     assert order["status"] == "REJECTED"
     assert "Aguacate Hass" in order["rejection_reason"]
     assert env["payments"].calls == 0

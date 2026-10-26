@@ -62,7 +62,9 @@ class HttpCatalogClient(CatalogPort):
         self.client = client
 
     def reserve(self, order_id: str, items: list[dict]) -> dict:
-        resp = self.client.request("POST", "/reservations", json={"order_id": order_id, "items": items})
+        resp = self.client.request(
+            "POST", "/reservations", json={"order_id": order_id, "items": items}
+        )
         _raise_for_business(resp, "Reserva rechazada por el catálogo")
         return resp.json()
 

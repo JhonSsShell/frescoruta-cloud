@@ -70,7 +70,11 @@ class ServiceClient:
             base_url = self.resolver.resolve(self.service_name)
             try:
                 response = self._client.request(
-                    method, base_url + path, json=json, params=params, headers=self._headers(headers)
+                    method,
+                    base_url + path,
+                    json=json,
+                    params=params,
+                    headers=self._headers(headers),
                 )
             except httpx.TransportError as exc:
                 self.resolver.invalidate(self.service_name)

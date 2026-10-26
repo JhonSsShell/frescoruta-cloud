@@ -1,7 +1,9 @@
 def pay(client, order_id="PED-1", amount=100_000, method="CARD", key=None):
     headers = {"Idempotency-Key": key} if key else {}
     return client.post(
-        "/payments", json={"order_id": order_id, "amount": amount, "method": method}, headers=headers
+        "/payments",
+        json={"order_id": order_id, "amount": amount, "method": method},
+        headers=headers,
     )
 
 

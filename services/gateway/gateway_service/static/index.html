@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FrescoRuta Cloud · Panel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">FR</span>
+      <div>
+        <h1>FrescoRuta Cloud</h1>
+        <p>Panel de demostración · arquitectura de microservicios</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="env-badge" class="badge">entorno</span>
+      <label class="apikey">API key
+        <input id="api-key" type="password" autocomplete="off" spellcheck="false">
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <section class="services" id="services" aria-label="Estado de los servicios"></section>
+
+    <section class="kpis" aria-label="Indicadores">
+      <div class="kpi"><span class="kpi-label">Pedidos confirmados</span><span class="kpi-value" id="kpi-confirmed">–</span></div>
+      <div class="kpi"><span class="kpi-label">Pedidos rechazados</span><span class="kpi-value" id="kpi-rejected">–</span></div>
+      <div class="kpi"><span class="kpi-label">Ventas confirmadas</span><span class="kpi-value" id="kpi-revenue">–</span></div>
+      <div class="kpi"><span class="kpi-label">Notificaciones enviadas</span><span class="kpi-value" id="kpi-notifications">–</span></div>
+      <div class="kpi"><span class="kpi-label">Peticiones al gateway</span><span class="kpi-value" id="kpi-requests">–</span></div>
+    </section>
+
+    <div class="grid">
+      <section class="card" aria-labelledby="t-order">
+        <h2 id="t-order">Nuevo pedido</h2>
+        <div class="scenarios">
+          <span>Escenarios rápidos:</span>
+          <button type="button" data-scenario="ok">Pedido exitoso</button>
+          <button type="button" data-scenario="stock">Stock insuficiente</button>
+          <button type="button" data-scenario="declined">Pago rechazado</button>
+        </div>
+        <form id="order-form">
+          <div class="row">
+            <label>Cliente<input name="customer_name" required value="Restaurante La Huerta"></label>
+            <label>Correo<input name="customer_email" type="email" required value="compras@lahuerta.co"></label>
+          </div>
+          <div class="row">
+            <label>Ciudad
+              <select name="delivery_city"><option>Bogotá</option><option>Medellín</option><option>Cali</option></select>
+            </label>
+            <label>Medio de pago
+              <select name="payment_method">
+                <option value="CARD">Tarjeta</option>
+                <option value="PSE">PSE</option>
+                <option value="CASH_ON_DELIVERY">Contraentrega</option>
+              </select>
+            </label>
+          </div>
+          <div id="lines"></div>
+          <div class="form-actions">
+            <button type="button" id="add-line" class="ghost">+ Agregar producto</button>
+            <button type="submit" class="primary">Crear pedido</button>
+          </div>
+        </form>
+        <div id="order-result" class="result" hidden></div>
+      </section>
+
+      <section class="card" aria-labelledby="t-resilience">
+        <h2 id="t-resilience">Resiliencia</h2>
+        <p class="hint">Inyecte fallas en la pasarela de pagos y observe el Retry y el Circuit Breaker del servicio de pedidos.</p>
+        <div class="chaos">
+          <span>Fallas en pagos:</span>
+          <button type="button" data-chaos="0">0 %</button>
+          <button type="button" data-chaos="0.5">50 %</button>
+          <button type="button" data-chaos="1">100 %</button>
+          <strong id="chaos-state">–</strong>
+        </div>
+        <div id="breakers" class="breakers"></div>
+        <button type="button" id="reset-breakers" class="ghost">Reiniciar circuit breakers</button>
+      </section>
+    </div>
+
+    <div class="grid">
+      <section class="card wide" aria-labelledby="t-orders">
+        <h2 id="t-orders">Pedidos y bitácora de la saga</h2>
+        <div id="orders" class="orders"></div>
+      </section>
+      <section class="card" aria-labelledby="t-notif">
+        <h2 id="t-notif">Notificaciones (eventos)</h2>
+        <ul id="notifications" class="feed"></ul>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="t-catalog">
+      <h2 id="t-catalog">Catálogo e inventario <span id="cache-badge" class="badge">cache</span></h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>SKU</th><th>Producto</th><th>Categoría</th><th>Unidad</th><th class="num">Precio</th><th class="num">Stock</th></tr></thead>
+          <tbody id="catalog"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>FrescoRuta S.A.S. es una empresa ficticia creada con fines académicos · <a href="/docs">OpenAPI del gateway</a></footer>
+  <script src="app.js"></script>
+</body>
+</html>

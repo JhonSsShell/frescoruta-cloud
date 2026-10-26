@@ -1,0 +1,50 @@
+@startuml vista-componentes
+!include _estilo.iuml
+skinparam dpi 150
+skinparam linetype polyline
+skinparam ComponentFontSize 12
+title Vista de componentes — estilo de microservicios con API Gateway y eventos
+
+actor "Cliente B2B /\nOperador" as U
+component "Panel web\n(HTML + JS)" as UI
+
+package "Borde" {
+  component "API Gateway" <<Gateway Routing · Offloading · Aggregation>> as GW
+}
+
+package "Servicios de negocio (Database per Service)" {
+  component "Pedidos" <<Saga orquestada>> as ORD
+  database "orders" as DO
+  component "Catálogo e\nInventario" <<Cache-Aside>> as CAT
+  database "catalog" as DC
+  component "Pagos" <<Strategy · Idempotencia>> as PAY
+  database "payments" as DP
+  component "Notificaciones" <<Suscriptor idempotente>> as NOT
+  database "notifications" as DN
+}
+
+package "Plataforma (Redis / Key Value)" {
+  queue "Bus de eventos\nRedis Streams" as BUS
+  component "Service Registry" as REG
+  component "Caché distribuida" as CACHE
+}
+
+U --> UI
+UI --> GW : REST/JSON · HTTPS
+GW --> ORD
+GW --> CAT
+GW --> PAY
+GW --> NOT
+ORD --> CAT : reservar / confirmar / liberar
+ORD --> PAY : cobrar / reembolsar
+ORD - DO
+CAT - DC
+PAY - DP
+NOT - DN
+ORD ..> BUS : order.*
+CAT ..> BUS : stock.low
+PAY ..> BUS : payment.*
+BUS ..> NOT : suscripción
+CAT ..> CACHE
+GW ..> REG : descubrir URL
+@enduml

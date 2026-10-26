@@ -1,0 +1,73 @@
+@startuml despliegue
+!include _estilo.iuml
+skinparam dpi 150
+skinparam linetype polyline
+skinparam nodesep 45
+skinparam ranksep 70
+skinparam RectangleBackgroundColor #F7FAF8
+skinparam RectangleBorderColor #8FB5A0
+title Diagrama de despliegue — FrescoRuta Cloud en Render
+
+node "Dispositivo del cliente\n«device»" as DEV {
+  artifact "Navegador web\n(panel HTML + JS)" as BROWSER
+}
+
+rectangle "GitHub" as GH {
+  artifact "Repositorio\nfrescoruta-cloud\n+ render.yaml" as REPO
+  node "GitHub Actions «CI»\nruff · pytest · docker build" as CI
+}
+
+rectangle "Render · región Oregon · plan gratuito" as RENDER {
+  node "frescoruta-gateway\n«web service Docker»" as NGW {
+    artifact "gateway_service\nFastAPI + Uvicorn" as AGW
+  }
+  node "frescoruta-orders\n«web service Docker»" as NORD {
+    artifact "order_service" as AORD
+    database "orders.db\nSQLite" as DORD
+  }
+  node "frescoruta-catalog\n«web service Docker»" as NCAT {
+    artifact "catalog_service" as ACAT
+    database "catalog.db\nSQLite" as DCAT
+  }
+  node "frescoruta-payments\n«web service Docker»" as NPAY {
+    artifact "payment_service" as APAY
+    database "payments.db\nSQLite" as DPAY
+  }
+  node "frescoruta-notifications\n«web service Docker»" as NNOT {
+    artifact "notification_service" as ANOT
+    database "notifications.db\nSQLite" as DNOT
+  }
+  node "frescoruta-kv\n«Key Value · Redis 7» · solo red privada" as NKV {
+    queue "Stream frescoruta:events\n(+ DLQ)" as STREAM
+    database "Service Registry\nfrescoruta:registry" as REG
+    database "Caché\nfrescoruta:catalog:*" as CACHE
+  }
+}
+
+BROWSER --> NGW : HTTPS 443 · /api/*\nX-API-Key
+NGW --> NORD : HTTPS (*.onrender.com)\nX-Internal-Token
+NGW --> NCAT : HTTPS
+NGW --> NPAY : HTTPS
+NGW --> NNOT : HTTPS
+NORD --> NCAT : HTTPS\nRetry + Circuit Breaker
+NORD --> NPAY : HTTPS\nRetry + Circuit Breaker
+AORD - DORD
+ACAT - DCAT
+APAY - DPAY
+ANOT - DNOT
+NORD ..> NKV : TCP 6379 (privado)\nXADD · registro
+NCAT ..> NKV : caché · XADD
+NPAY ..> NKV : XADD
+NKV ..> NNOT : XREADGROUP\n(consumer group)
+REPO --> CI : push / PR
+STREAM -[hidden]right- REG
+REG -[hidden]right- CACHE
+REPO ==> RENDER : Blueprint · auto-deploy\n(5 imágenes Docker)
+
+note right of NKV
+  Los web services gratuitos no reciben tráfico
+  privado: cada servicio publica su
+  RENDER_EXTERNAL_URL en el Service Registry
+  y los demás la resuelven por nombre lógico.
+end note
+@enduml

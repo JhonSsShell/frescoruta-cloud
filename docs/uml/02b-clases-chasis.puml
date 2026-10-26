@@ -1,0 +1,133 @@
+@startuml clases-chasis
+!include _estilo.iuml
+skinparam dpi 150
+skinparam linetype ortho
+hide empty members
+title Diagrama de clases — chasis compartido (frescoruta_common)
+
+package "Resiliencia" {
+  enum CircuitState {
+    CLOSED
+    OPEN
+    HALF_OPEN
+  }
+  class CircuitBreaker <<Circuit Breaker>> {
+    +name : str
+    +failure_threshold : int
+    +recovery_timeout : float
+    -state : CircuitState
+    -failures : int
+    +call(fn) : T
+    +reset()
+    +snapshot() : dict
+  }
+  class Retry <<utility>> {
+    +retry_call(fn, attempts, base_delay, retry_on) : T
+  }
+  class ServiceClient {
+    +service_name : str
+    +retries : int
+    +request(method, path, json, headers) : Response
+  }
+  class ServiceUnavailableError <<exception>>
+  class CircuitBreakerOpenError <<exception>>
+  CircuitBreaker --> CircuitState
+  CircuitBreaker ..> CircuitBreakerOpenError : «lanza»
+  ServiceClient --> "0..1" CircuitBreaker
+  ServiceClient ..> Retry
+  ServiceClient ..> ServiceUnavailableError : «lanza»
+}
+
+package "Mensajería (Publish/Subscribe)" {
+  class Event {
+    +id : str
+    +type : str
+    +source : str
+    +payload : dict
+    +occurred_at : str
+    +correlation_id : str
+  }
+  abstract class EventBus {
+    +publish(event)
+    +subscribe(types, handler)
+    +start()
+    +stop()
+    #dispatch(event) : bool
+  }
+  class InMemoryEventBus
+  class RedisStreamEventBus {
+    +group : str
+    +consumer : str
+    +stream : str
+    +poll_once(cursor) : int
+    +claim_orphans(min_idle_ms) : int
+    -dead_letter(id, fields)
+  }
+  EventBus <|-- InMemoryEventBus
+  EventBus <|-- RedisStreamEventBus
+  EventBus ..> Event
+}
+
+package "Descubrimiento (Service Registry)" {
+  class ServiceRegistry {
+    +register(name, url, version)
+    +lookup(name) : str
+    +all() : dict
+  }
+  class ServiceResolver {
+    +resolve(name) : str
+    +invalidate(name)
+  }
+  class RegistrationAgent {
+    +interval : float
+    +start()
+    +stop()
+  }
+  ServiceResolver --> ServiceRegistry
+  RegistrationAgent --> ServiceRegistry : latido 30 s
+}
+
+package "Caché (Cache-Aside)" {
+  abstract class Cache {
+    +get(key)
+    +set(key, value, ttl)
+    +delete_prefix(prefix)
+  }
+  class InMemoryTTLCache
+  class RedisCache
+  Cache <|-- InMemoryTTLCache
+  Cache <|-- RedisCache
+}
+
+package "Ensamblado del servicio" {
+  class Settings <<12-Factor>> {
+    +service_name : str
+    +port : int
+    +public_url : str
+    +database_url : str
+    +redis_url : str
+    +internal_token : str
+    +from_env(name, port) : Settings
+  }
+  class Runtime {
+    +settings : Settings
+    +event_bus : EventBus
+    +registry : ServiceRegistry
+    +resolver : ServiceResolver
+    +agent : RegistrationAgent
+  }
+  class CorrelationIdMiddleware <<middleware>>
+  class InternalAuthMiddleware <<middleware>>
+  class HealthRouter <<Health Endpoint>> {
+    +GET /health
+  }
+  Runtime --> Settings
+}
+
+ServiceClient --> ServiceResolver
+Runtime --> EventBus
+Runtime --> ServiceResolver
+Runtime --> RegistrationAgent
+Settings -[hidden]down-> ServiceClient
+Event -[hidden]down-> Cache
+@enduml

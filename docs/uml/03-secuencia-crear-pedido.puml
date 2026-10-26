@@ -1,0 +1,84 @@
+@startuml secuencia-crear-pedido
+!include _estilo.iuml
+skinparam dpi 150
+skinparam ParticipantPadding 12
+skinparam BoxPadding 8
+autonumber "<b>0."
+hide footbox
+title Diagrama de secuencia — Crear pedido (Saga orquestada con compensación)
+
+actor "Cliente B2B" as C
+box "Render · servicios web (HTTPS)" #F7FAF8
+participant "API Gateway" as GW
+participant "order-service\n«orquestador»" as ORD
+participant "catalog-service" as CAT
+participant "payment-service" as PAY
+participant "notification-service" as NOT
+end box
+queue "Redis Streams\nfrescoruta:events" as BUS
+database "orders.db" as ODB
+
+C -> GW : POST /api/orders\nX-API-Key, Idempotency-Key
+activate GW
+GW -> GW : validar API key\ntoken bucket (rate limit)\nX-Request-ID
+GW -> ORD : POST /orders\n+ X-Internal-Token
+activate ORD
+ORD -> ODB : INSERT pedido (PENDING)
+ORD -> BUS : XADD order.created
+
+== T1 · Reservar inventario ==
+ORD -> CAT : POST /reservations {order_id, items}
+activate CAT
+CAT -> CAT : UPDATE stock = stock − q\nWHERE stock ≥ q (atómico)
+alt stock suficiente
+  CAT --> ORD : 201 reserva {id, precios, total}
+  ORD -> ODB : guardar total y paso reserve_stock
+else stock insuficiente
+  CAT --> ORD : 409 INSUFFICIENT_STOCK
+  ORD -> ODB : REJECTED + paso FAILED
+  ORD -> BUS : XADD order.rejected
+  ORD --> GW : 201 {status: REJECTED} (fin de la saga)
+end
+deactivate CAT
+
+== T2 · Procesar pago (Retry + Circuit Breaker) ==
+loop hasta 3 intentos con backoff exponencial y jitter
+  ORD -> PAY : POST /payments\nIdempotency-Key: order:{id}
+  activate PAY
+  PAY --> ORD : 201 APPROVED | 201 DECLINED | 503
+  deactivate PAY
+end
+note right of ORD
+  Circuit Breaker «payment-service»:
+  3 fallos técnicos → OPEN (falla rápido 20 s)
+  → HALF_OPEN (prueba) → CLOSED
+end note
+
+alt pago aprobado
+  == T3 · Confirmar inventario ==
+  ORD -> CAT : POST /reservations/{id}/commit
+  CAT --> ORD : 200 COMMITTED
+  ORD -> ODB : CONFIRMED + bitácora
+  ORD -> BUS : XADD order.confirmed
+  ORD --> GW : 201 {status: CONFIRMED}
+else pago rechazado / pasarela no disponible / circuito abierto
+  group Compensación C1
+    ORD -> CAT : POST /reservations/{id}/release
+    CAT --> ORD : 200 RELEASED (stock devuelto)
+  end
+  ORD -> ODB : REJECTED + paso COMPENSATED
+  ORD -> BUS : XADD order.rejected
+  ORD --> GW : 201 {status: REJECTED, motivo}
+end
+deactivate ORD
+GW --> C : respuesta + X-Request-ID
+deactivate GW
+
+== Asíncrono · Publicador/Suscriptor ==
+BUS -> NOT : XREADGROUP (consumer group)
+activate NOT
+NOT -> NOT : ¿(event_id, canal) ya procesado?\n(consumidor idempotente)
+NOT -> NOT : enviar correo / WhatsApp
+NOT -> BUS : XACK
+deactivate NOT
+@enduml

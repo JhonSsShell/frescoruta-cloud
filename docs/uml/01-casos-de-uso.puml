@@ -1,0 +1,54 @@
+@startuml casos-de-uso
+!include _estilo.iuml
+left to right direction
+title Diagrama de casos de uso — FrescoRuta Cloud
+
+actor "Cliente B2B\n(restaurante, tienda, hotel)" as Cliente
+actor "Operador de\ninventario" as Operador
+actor "Analista de\ncompras" as Compras
+actor "Administrador de\nplataforma (DevOps)" as Admin
+
+rectangle "FrescoRuta Cloud" {
+  usecase "UC01 Consultar catálogo\ny disponibilidad" as UC01
+  usecase "UC02 Crear pedido" as UC02
+  usecase "UC06 Consultar estado y\nbitácora del pedido" as UC06
+  usecase "UC07 Recibir notificación\ndel pedido" as UC07
+  usecase "UC03 Reservar inventario" as UC03
+  usecase "UC04 Procesar pago" as UC04
+  usecase "UC05 Compensar pedido\n(liberar stock / reembolsar)" as UC05
+  usecase "UC08 Autenticarse\ncon API key" as UC08
+  usecase "UC09 Gestionar productos\ny ajustar stock" as UC09
+  usecase "UC10 Recibir alerta\nde stock bajo" as UC10
+  usecase "UC11 Monitorear salud\ny métricas" as UC11
+  usecase "UC12 Inyectar fallas y\nreiniciar circuit breakers" as UC12
+}
+
+actor "Pasarela de pagos\n<<sistema externo>>" as Pasarela
+actor "Proveedor de mensajería\n<<sistema externo>>" as Mensajeria
+
+Cliente -- UC01
+Cliente -- UC02
+Cliente -- UC06
+Cliente -- UC07
+Operador -- UC09
+Compras -- UC10
+Admin -- UC11
+Admin -- UC12
+
+UC02 ..> UC03 : <<include>>
+UC02 ..> UC04 : <<include>>
+UC02 ..> UC08 : <<include>>
+UC09 ..> UC08 : <<include>>
+UC12 ..> UC08 : <<include>>
+UC05 .> UC02 : <<extend>>\n[falla un paso]
+
+UC04 -- Pasarela
+UC07 -- Mensajeria
+UC10 -- Mensajeria
+
+note bottom of UC07
+  Disparado por los eventos
+  order.confirmed y order.rejected
+  (Publicador/Suscriptor)
+end note
+@enduml

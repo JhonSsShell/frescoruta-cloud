@@ -121,9 +121,9 @@ function setLines(lines) {
 }
 
 const SCENARIOS = {
-  ok: { method: "CARD", lines: [["FR-001", 10], ["FR-005", 3], ["FR-011", 12]] },
+  ok: { method: "CARD", lines: [["FR-001", 10], ["FR-005", 3], ["FR-009", 2], ["FR-011", 12]] },
   stock: { method: "PSE", lines: [["FR-009", 500]] },
-  declined: { method: "CARD", lines: [["FR-012", 300]] },
+  declined: { method: "CASH_ON_DELIVERY", lines: [["FR-012", 100]] },
 };
 
 async function submitOrder(ev) {

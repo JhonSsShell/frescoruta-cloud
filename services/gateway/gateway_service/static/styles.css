@@ -34,7 +34,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; display: flex; flex-dir
   background: var(--accent); font-weight: 800; letter-spacing: .5px;
 }
 .topbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.apikey { font-size: .8rem; display: flex; align-items: center; gap: 6px; }
+.apikey { font-size: .8rem; display: flex; align-items: center; gap: 6px; color: var(--brand-ink); }
 .apikey input { width: 190px; border: 0; border-radius: 8px; padding: 6px 8px; }
 
 .badge {

@@ -99,7 +99,7 @@ def test_low_stock_event_is_published(client, bus):
     )
     events = [e for e in bus.published if e.type == "stock.low"]
     assert events and events[0].payload["product_id"] == "FR-009"
-    assert events[0].payload["stock"] == 15
+    assert events[0].payload["stock"] == 30
 
 
 def test_create_product_and_adjust_stock(client):

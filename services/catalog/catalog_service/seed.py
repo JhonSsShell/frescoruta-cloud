@@ -71,8 +71,8 @@ PRODUCTS = [
         "category": "Frutas",
         "unit": "kg",
         "price": 8900,
-        "stock": 25,
-        "low_stock_threshold": 20,
+        "stock": 40,
+        "low_stock_threshold": 40,
     },
     {
         "id": "FR-010",

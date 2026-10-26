@@ -117,7 +117,8 @@ frescoruta-cloud/
 │   └── img/                    # Capturas del prototipo
 ├── scripts/
 │   ├── run_local.sh            # Levanta todo sin Docker
-│   └── demo.py                 # Guion de demostración de punta a punta
+│   ├── demo.py                 # Guion de demostración de punta a punta
+│   └── load_test.py            # Carga y concurrencia (sin sobreventa)
 ├── docker-compose.yml
 ├── render.yaml                 # Blueprint (infraestructura como código)
 ├── .github/workflows/ci.yml    # Lint + pruebas + build de imágenes
@@ -197,6 +198,21 @@ python scripts/demo.py --url https://<gateway>.onrender.com --key <API_KEY>
 | 4 | Stock insuficiente | Falla T1; no se intenta cobrar |
 | 5 | Pago rechazado | Falla T2; **compensación**: se libera el stock |
 | 6 | Pasarela caída (100 %) | 3 intentos (Retry) → circuito **OPEN** → el siguiente pedido falla en ~40 ms sin llamar a pagos |
+
+### Prueba de carga y concurrencia
+
+```bash
+RATE_LIMIT_PER_MINUTE=100000 RATE_LIMIT_BURST=10000 ./scripts/run_local.sh
+python scripts/load_test.py
+```
+
+Resultado de referencia (máquina de 2 vCPU con los cinco servicios y el
+generador de carga):
+
+| Escenario | Resultado |
+|---|---|
+| 50 usuarios × 20 `GET /api/products` | 1 000/1 000 OK, 100 % *cache hit*, p50 106 ms, p95 431 ms, ~294 req/s |
+| 30 pedidos concurrentes por 3 kg de mora (stock 40) | 13 confirmados, 17 rechazados, stock final 1 → **sin sobreventa**; p95 594 ms |
 
 ## 8. API pública (vía gateway)
 

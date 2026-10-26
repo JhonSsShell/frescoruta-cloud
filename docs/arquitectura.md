@@ -38,8 +38,8 @@ entre servicios es **eventual** y se garantiza con una **Saga orquestada**.
 | ID | Atributo | Estímulo | Respuesta esperada | Medida | Táctica / patrón |
 |---|---|---|---|---|---|
 | QA-1 | Disponibilidad | La pasarela de pagos deja de responder | Los pedidos se rechazan sin cobrar y sin bloquear stock; el catálogo sigue disponible | Tras 3 fallos el circuito se abre y la respuesta baja de ~400 ms a ~40 ms; 0 reservas huérfanas | Circuit Breaker, Retry, compensación |
-| QA-2 | Consistencia | Dos pedidos compiten por las últimas unidades | Solo uno obtiene la reserva | Stock nunca negativo | `UPDATE … WHERE stock >= q` atómico |
-| QA-3 | Rendimiento | 50 clientes consultan el catálogo | Respuesta desde caché | p95 < 300 ms | Cache-Aside con TTL 30 s |
+| QA-2 | Consistencia | 30 pedidos concurrentes compiten por 40 kg de mora (3 kg c/u) | Solo se confirman los que caben | 13 confirmados, 17 rechazados, stock final 1 (nunca negativo) | `UPDATE … WHERE stock >= q` atómico |
+| QA-3 | Rendimiento | 50 clientes consultan el catálogo sin pausa (~300 req/s) | Respuesta desde caché | p95 < 500 ms (medido: 431 ms en 2 vCPU con los 5 servicios) | Cache-Aside con TTL 30 s |
 | QA-4 | Escalabilidad | Pico de eventos de pedidos | Se agregan réplicas del suscriptor | Sin duplicados ni pérdidas | Competing Consumers, consumidor idempotente |
 | QA-5 | Seguridad | Cliente abusivo envía 1 000 req/min | Se limita al cliente sin afectar a otros | HTTP 429 + `Retry-After` | Token Bucket por API key |
 | QA-6 | Modificabilidad | Se agrega Nequi como medio de pago | Solo se crea una estrategia nueva | 1 clase, 0 cambios en la saga | Strategy + Factory |

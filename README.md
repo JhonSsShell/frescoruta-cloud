@@ -31,7 +31,6 @@ códigos: la sinfonía de los sistemas”*.
 10. [Configuración](#10-configuración)
 11. [Decisiones de arquitectura](#11-decisiones-de-arquitectura)
 12. [Limitaciones y trabajo futuro](#12-limitaciones-y-trabajo-futuro)
-13. [Equipo](#13-equipo)
 
 ---
 
@@ -299,18 +298,6 @@ El flujo [`ci.yml`](.github/workflows/ci.yml) ejecuta lint y pruebas en cada
   OpenTelemetry + Grafana.
 * **Pasarela y mensajería simuladas:** adaptadores listos para Wompi/PayU,
   Amazon SES o WhatsApp Business API.
-
-## 13. Equipo
-
-| Rol | Integrante |
-|---|---|
-| Líder / arquitectura | [Nombre integrante 1] |
-| Backend (pedidos y saga) | [Nombre integrante 2] |
-| Backend (catálogo y pagos) | [Nombre integrante 3] |
-| DevOps (Docker, Render, CI) | [Nombre integrante 4] |
-| Documentación y QA | [Nombre integrante 5] |
-
----
 
 Licencia [MIT](LICENSE). FrescoRuta S.A.S. es una empresa ficticia creada con
 fines académicos.
